@@ -14,8 +14,8 @@ class TreeBallz(minigame.Minigame):
     game_type = minigame.MULTIPLAYER
     name = 'Shoot the eyeball!!!'
     duration = 5
-    playerImages = [pygame.image.load('./res/img/treeballz/Blue.png'),pygame.image.load('./res/img/treeballz/BlueF.png'),pygame.image.load('./res/img/treeballz/Red.png'),pygame.image.load('./res/img/treeballz/RedF.png')]
-    projectileImages = [pygame.image.load('./res/img/treeballz/BlueBullet.png'),pygame.image.load('./res/img/treeballz/RedBullet.png')]
+    playerImages = [pygame.image.load('./res/img/treeballz/Red.png'),pygame.image.load('./res/img/treeballz/RedF.png'),pygame.image.load('./res/img/treeballz/Blue.png'),pygame.image.load('./res/img/treeballz/BlueF.png')]
+    projectileImages = [pygame.image.load('./res/img/treeballz/RedBullet.png'),pygame.image.load('./res/img/treeballz/BlueBullet.png')]
     board = pygame.image.load('./res/img/treeballz/Panel.png')
     ladders = [pygame.Rect(159,342,32,108),pygame.Rect(18,227,32,108),pygame.Rect(238,98,32,108),pygame.Rect(497,98,32,108),pygame.Rect(705,227,32,108),pygame.Rect(578,343,32,108)]
     platforms = [pygame.Rect(0,348,276,15),pygame.Rect(0,233,329,15),pygame.Rect(220,104,300,15),pygame.Rect(439,233,329,15),pygame.Rect(470,349,276,15)]
@@ -37,19 +37,11 @@ class TreeBallz(minigame.Minigame):
         # initialize font; must be called after 'pygame.init()' to avoid 'Font not Initialized' error
         self.font = pygame.font.SysFont("monospace", 15)
 
-
-
-
-
-
     def tick(self):
         self.lastElapsed = self.elapsed_ms/1000.0
         self.elapsedms = pygame.time.get_ticks()/1000.0
-        
         self.lastShot[0] += (self.elapsedms - self.lastElapsed)
         self.lastShot[1] += (self.elapsedms - self.lastElapsed)
-    
-
         self.update()
         self.draw()
 
@@ -57,7 +49,7 @@ class TreeBallz(minigame.Minigame):
         wins = [False,False]
         if self.hits[0] > self.hits[1]:
             wins[0] = True
-        else:
+        elif self.hits[0] < self.hits[1]:
             wins[1] = True
         return wins
 
@@ -77,14 +69,13 @@ class TreeBallz(minigame.Minigame):
                 self.screen.blit(TreeBallz.projectileImages[i],proj[0]['rect'])
 
         # render text
-        p1Hits = self.font.render("Player 1 Hits: " + str(self.hits[0]), 1, (255,255,0))
         p2Hits = self.font.render("Player 2 Hits: " + str(self.hits[1]), 1, (255,255,0))
+        p1Hits = self.font.render("Player 1 Hits: " + str(self.hits[0]), 1, (255,255,0))
         self.screen.blit(p1Hits, (60, 10))
         self.screen.blit(p2Hits, (500, 10))
 
     def addProjectile(self,i,lookingLeft):
         self.projectiles[i].append([{'rect': pygame.Rect(self.eyeballs[i].x,self.eyeballs[i].y+5, 16, 16), 'leftFacing': lookingLeft}])
-
 
     def get_duration(self):
         return 10000
@@ -106,10 +97,9 @@ class TreeBallz(minigame.Minigame):
         for i,eye in enumerate(self.eyeballs):
             onPlatform = False
             for platform in self.platforms:
-                if eye.colliderect(platform) and not self.inLadder[i]:# and eye.bottom <= platform.bottom - platform.height/3:
+                if eye.colliderect(platform) and not self.inLadder[i]:
                     eye.bottom = platform.top + 1 
                     onPlatform = True
-            print onPlatform
             if eye.bottom < 480 and not self.inLadder[i] and not onPlatform:
                 eye.y += 15
             elif eye.bottom > 480:
@@ -138,15 +128,15 @@ class TreeBallz(minigame.Minigame):
 
         #TODO: Projectile movement.
         for i,list in enumerate(self.projectiles):
-            for proj in list:
+            for proj in list[:]:
                 if proj[0]['leftFacing'] == True:
                     proj[0]['rect'].x -= 20
                 else:
                     proj[0]['rect'].x += 20
 
                 if i==0 and proj[0]['rect'].colliderect(self.eyeballs[1]):
-                    self.hits[1] += 1
-                    list.remove(proj)
-                elif i==1 and proj[0]['rect'].colliderect(self.eyeballs[0]):
                     self.hits[0] += 1
-                    list.remove(proj)
+                    self.projectiles[i].remove(proj)
+                elif i==1 and proj[0]['rect'].colliderect(self.eyeballs[0]):
+                    self.hits[1] += 1
+                    self.projectiles[i].remove(proj)
