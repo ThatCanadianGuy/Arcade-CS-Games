@@ -7,7 +7,7 @@ import multiplayer
 import random
 
 
-# Written and designed by Spencer Dubé
+# Written and designed by Spencer Dube
 
 
 class TreeBallz(minigame.Minigame):
@@ -20,7 +20,6 @@ class TreeBallz(minigame.Minigame):
     ladders = [pygame.Rect(159,342,32,108),pygame.Rect(18,227,32,108),pygame.Rect(238,98,32,108),pygame.Rect(497,98,32,108),pygame.Rect(705,227,32,108),pygame.Rect(578,343,32,108)]
     platforms = [pygame.Rect(0,348,276,15),pygame.Rect(0,233,329,15),pygame.Rect(220,104,300,15),pygame.Rect(439,233,329,15),pygame.Rect(470,349,276,15)]
     def __init__(self, game):
-        
         minigame.Minigame.__init__(self, game)
         self.width = game.GAME_WIDTH
         self.height = game.GAME_HEIGHT
@@ -28,13 +27,20 @@ class TreeBallz(minigame.Minigame):
             pygame.Rect(random.randrange(50, 700),0, 32, 32),
             pygame.Rect(random.randrange(50, 700),0, 32, 32)
         ]
-        self.dead = [False, False]
-        self.lookingLeft = [False,True]
+        self.lookingLeft = [False,False]
         self.projectiles = [[],[]]
+        self.hits = [0,0]
         self.lastShot = [0.0,0.0]
         self.elapsedms = 0.0
         self.lastElapsed =0.0
         self.inLadder = [False,False]
+        # initialize font; must be called after 'pygame.init()' to avoid 'Font not Initialized' error
+        self.font = pygame.font.SysFont("monospace", 15)
+
+
+
+
+
 
     def tick(self):
         self.lastElapsed = self.elapsed_ms/1000.0
@@ -48,13 +54,16 @@ class TreeBallz(minigame.Minigame):
         self.draw()
 
     def get_results(self):
-        return self.dead
+        wins = [False,False]
+        if self.hits[0] > self.hits[1]:
+            wins[0] = True
+        else:
+            wins[1] = True
+        return wins
 
     def draw(self):
         self.screen.blit(TreeBallz.board , [0,0])
         for i,eyeball in enumerate(self.eyeballs):
-            if self.dead[i]:
-                continue;
             if(i == 0 and self.lookingLeft[i] == True):
                 self.screen.blit(TreeBallz.playerImages[1], eyeball)
             elif(i == 1 and self.lookingLeft[i] == True):
@@ -66,6 +75,12 @@ class TreeBallz(minigame.Minigame):
         for i,list in enumerate(self.projectiles):
             for proj in list:
                 self.screen.blit(TreeBallz.projectileImages[i],proj[0]['rect'])
+
+        # render text
+        p1Hits = self.font.render("Player 1 Hits: " + str(self.hits[0]), 1, (255,255,0))
+        p2Hits = self.font.render("Player 2 Hits: " + str(self.hits[1]), 1, (255,255,0))
+        self.screen.blit(p1Hits, (60, 10))
+        self.screen.blit(p2Hits, (500, 10))
 
     def addProjectile(self,i,lookingLeft):
         self.projectiles[i].append([{'rect': pygame.Rect(self.eyeballs[i].x,self.eyeballs[i].y+5, 16, 16), 'leftFacing': lookingLeft}])
@@ -103,7 +118,7 @@ class TreeBallz(minigame.Minigame):
         #Player movement and shooting
         for i in range(2):
             keys = input_map.get_player_keys(i)
-            if len(keys) > 0 and not self.dead[i]:
+            if len(keys) > 0:
                 if keys[input_map.RIGHT]:
                     if self.eyeballs[i].right < 725:
                         self.eyeballs[i].x += 10
@@ -130,10 +145,8 @@ class TreeBallz(minigame.Minigame):
                     proj[0]['rect'].x += 20
 
                 if i==0 and proj[0]['rect'].colliderect(self.eyeballs[1]):
-                    self.dead[1] = True
+                    self.hits[1] += 1
                     list.remove(proj)
-                    self.game.state.game_done()
                 elif i==1 and proj[0]['rect'].colliderect(self.eyeballs[0]):
-                    self.dead[0] = True
+                    self.hits[0] += 1
                     list.remove(proj)
-                    self.game.state.game_done()
