@@ -14,6 +14,7 @@ class TreeBallz(minigame.Minigame):
     game_type = minigame.MULTIPLAYER
     name = 'Shoot the eyeball!!!'
     duration = 5
+    enemies = [pygame.transform.flip(pygame.transform.scale(pygame.image.load('./res/img/treeballz/bat.png'),[64,32]),True,False)]
     playerImages = [pygame.image.load('./res/img/treeballz/Red.png'),pygame.image.load('./res/img/treeballz/RedF.png'),pygame.image.load('./res/img/treeballz/Blue.png'),pygame.image.load('./res/img/treeballz/BlueF.png')]
     projectileImages = [pygame.image.load('./res/img/treeballz/RedBullet.png'),pygame.image.load('./res/img/treeballz/BlueBullet.png')]
     board = pygame.image.load('./res/img/treeballz/Panel.png')
@@ -21,13 +22,18 @@ class TreeBallz(minigame.Minigame):
     platforms = [pygame.Rect(0,348,276,15),pygame.Rect(0,233,329,15),pygame.Rect(220,104,300,15),pygame.Rect(439,233,329,15),pygame.Rect(470,349,276,15)]
     def __init__(self, game):
         minigame.Minigame.__init__(self, game)
+        self.clock = pygame.time.Clock()
         self.width = game.GAME_WIDTH
         self.height = game.GAME_HEIGHT
         self.eyeballs = [
             pygame.Rect(random.randrange(50, 700),0, 32, 32),
             pygame.Rect(random.randrange(50, 700),0, 32, 32)
         ]
+        self.enemies = [
+            pygame.Rect(0,0, 64, 32),
+        ]
         self.lookingLeft = [False,False]
+        self.batColliding = [False,False]
         self.projectiles = [[],[]]
         self.hits = [0,0]
         self.lastShot = [0.0,0.0]
@@ -38,10 +44,10 @@ class TreeBallz(minigame.Minigame):
         self.font = pygame.font.SysFont("monospace", 15)
 
     def tick(self):
-        self.lastElapsed = self.elapsed_ms/1000.0
-        self.elapsedms = pygame.time.get_ticks()/1000.0
-        self.lastShot[0] += (self.elapsedms - self.lastElapsed)
-        self.lastShot[1] += (self.elapsedms - self.lastElapsed)
+        self.clock.tick(33)
+        equElapsed = self.clock.get_time()/1000.0
+        self.lastShot[0] += equElapsed
+        self.lastShot[1] += equElapsed
         self.update()
         self.draw()
 
@@ -67,7 +73,10 @@ class TreeBallz(minigame.Minigame):
         for i,list in enumerate(self.projectiles):
             for proj in list:
                 self.screen.blit(TreeBallz.projectileImages[i],proj[0]['rect'])
-
+        
+        for i,enemi in enumerate(self.enemies):
+            self.screen.blit(TreeBallz.enemies[i],enemi)
+        
         # render text
         p2Hits = self.font.render("Player 2 Hits: " + str(self.hits[1]), 1, (255,255,0))
         p1Hits = self.font.render("Player 1 Hits: " + str(self.hits[0]), 1, (255,255,0))
@@ -79,6 +88,17 @@ class TreeBallz(minigame.Minigame):
 
     def get_duration(self):
         return 10000
+
+    def sineUpdate(self):
+        for enemi in self.enemies:
+            enemi.x += 3
+            coeff = float(enemi.x)/float(self.width)
+            enemi.y = abs(math.sin(coeff * math.pi * 4) * self.height * 0.9)
+            print enemi.y
+            if enemi.x > self.width:
+                enemi.x = 0
+                
+
 
     def update(self):
         pygame.event.get()
@@ -92,6 +112,11 @@ class TreeBallz(minigame.Minigame):
                     ladderHits += 1
             if ladderHits == 0:
                 self.inLadder[i] = False
+
+        #Enemies
+        self.sineUpdate()
+
+
 
         #Shitty gravity
         for i,eye in enumerate(self.eyeballs):
@@ -118,7 +143,7 @@ class TreeBallz(minigame.Minigame):
                         self.eyeballs[i].x -= 10
                         self.lookingLeft[i] = True
                 if keys[input_map.ACTION]:
-                    if self.lastShot[i] > 80:
+                    if self.lastShot[i] > 0.25:
                         self.addProjectile(i,self.lookingLeft[i]);
                         self.lastShot[i] = 0.0
                 if keys[input_map.UP] and self.inLadder[i]:
@@ -126,13 +151,29 @@ class TreeBallz(minigame.Minigame):
                 if keys[input_map.DOWN] and self.inLadder[i]:
                         self.eyeballs[i].y += 10
 
-        #TODO: Projectile movement.
+
+        #Ennemi collision
+        for i,enemi in enumerate(self.enemies):
+            if enemi.colliderect(self.eyeballs[0]) and not self.batColliding[0]:
+                self.batColliding[0] = True
+                self.hits[1] += 1
+            elif not enemi.colliderect(self.eyeballs[0]):
+                self.batColliding[0] = False
+            if enemi.colliderect(self.eyeballs[1]) and not self.batColliding[1]:
+                self.batColliding[1] = True
+                self.hits[0] += 1
+            elif not enemi.colliderect(self.eyeballs[1]):
+                self.batColliding[1] = False
+        #Projectile movement.
         for i,list in enumerate(self.projectiles):
             for proj in list[:]:
                 if proj[0]['leftFacing'] == True:
-                    proj[0]['rect'].x -= 20
+                    proj[0]['rect'].x -= 20       
                 else:
                     proj[0]['rect'].x += 20
+                
+                if proj[0]['rect'].x < 0 or proj[0]['rect'].x > 800:
+                    self.projectiles[i].remove(proj)
 
                 if i==0 and proj[0]['rect'].colliderect(self.eyeballs[1]):
                     self.hits[0] += 1

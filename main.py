@@ -4,7 +4,7 @@ import game
 from outputs import Outputs
 import os
 
-ON_ARCADE = os.getlogin() == 'capra'
+ON_ARCADE = False#os.getlogin() == 'capra'
 
 def main():
     pygame.init()
